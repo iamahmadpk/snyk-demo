@@ -21,9 +21,18 @@ jobs:
           docker build -t $IMAGE_NAME .
           echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
 
+      - name: Snyk Monitor (for reporting to Snyk Dashboard)
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ steps.build_image.outputs.image_name }}
+          args: --file=Dockerfile --exclude-base-image-vulns
+          command: monitor
+
       - name: Run Snyk to check Docker image for vulnerabilities
         id: snyk_scan
-        continue-on-error: true # Set to false later if you want a strict failure
+        continue-on-error: true
         uses: snyk/actions/docker@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -32,6 +41,5 @@ jobs:
           args: --file=Dockerfile --exclude-base-image-vulns
           command: test
       - name: Push image to Docker Hub
-        # This step will only run if the Snyk scan step did not fail
         if: ${{ success() && steps.snyk_scan.outcome == 'success' }}
         run: docker push ${{ steps.build_image.outputs.image_name }}
