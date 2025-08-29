@@ -1,26 +1,33 @@
 name: Container Scan
 on: push
+
 jobs:
   snyk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
-    - uses: actions/checkout@v2
-    - name: Build the Docker image
-      run: docker build -t mcastellin/snyk-container-demo .
-    - name: Run Snyk to check Docker image for vulnerabilities
-      # Snyk can be used to break the build when it detects vulnerabilities.
-      # In this case we want to upload the issues to GitHub Code Scanning
-      continue-on-error: true
-      uses: snyk/actions/docker@master
-      env:
-        # In order to use the Snyk Action you will need to have a Snyk API token.
-        # More details in https://github.com/snyk/actions#getting-your-snyk-token
-        # or you can signup for free at https://snyk.io/login
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: mcastellin/snyk-container-demo
-        args: --file=Dockerfile --exclude-base-image-vulns
-    - name: Upload result to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@v1
-      with:
-        sarif_file: snyk.sarif
+      - uses: actions/checkout@v2
+
+      - name: Build the Docker image
+        run: docker build -t my-org/my-app:latest .
+
+      - name: Run Snyk to check Docker image for vulnerabilities (and report to Snyk dashboard)
+        continue-on-error: true
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: my-org/my-app:latest
+          args: >
+            --file=Dockerfile
+            --exclude-base-image-vulns
+            --sarif-file-output=snyk.sarif
+            --project-name=snyk-vuln
+            --org=iamahmadpk
+
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk.sarif
