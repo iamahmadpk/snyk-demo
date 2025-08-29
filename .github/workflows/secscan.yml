@@ -1,29 +1,21 @@
 name: Container Scan
 on: push
-
 jobs:
   snyk:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Build the Docker image
-        run: docker build -t my-snyk-image .
-
-      - name: Run Snyk to check Docker image for vulnerabilities
-        uses: snyk/actions/docker@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: my-snyk-image
-          args: --file=Dockerfile --sarif-file-output=snyk.sarif
-
-      - name: Upload result to GitHub Code Scanning
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: snyk.sarif
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: docker build -t mcastellin/snyk-container-demo .
+    - name: Run Snyk to check Docker image for vulnerabilities
+      continue-on-error: true
+      uses: snyk/actions/docker@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        image: mcastellin/snyk-container-demo
+        args: --file=Dockerfile --exclude-base-image-vulns
+    - name: Upload result to GitHub Code Scanning
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: snyk.sarif
