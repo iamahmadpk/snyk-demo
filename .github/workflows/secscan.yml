@@ -30,7 +30,7 @@ jobs:
         with:
           image: ${{ steps.build_image.outputs.image_name }}
           args: --file=Dockerfile --exclude-base-image-vulns
-          command: monitor
+          command: test
       - name: Push image to Docker Hub
         # This step will only run if the Snyk scan step did not fail
         if: ${{ success() && steps.snyk_scan.outcome == 'success' }}
