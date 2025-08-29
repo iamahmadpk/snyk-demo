@@ -1,5 +1,7 @@
 name: Container Scan
-on: push
+
+on: 
+  push:
 
 jobs:
   snyk:
@@ -14,7 +16,8 @@ jobs:
         run: docker build -t my-snyk-image .
 
       - name: Run Snyk to check Docker image for vulnerabilities
-        uses: snyk/actions/docker@master
+        id: snyk-scan
+        uses: snyk/actions/docker@v3
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -23,7 +26,7 @@ jobs:
           args: --file=Dockerfile --sarif-file-output=snyk.sarif
 
       - name: Upload result to GitHub Code Scanning
-        if: always()   # ensures this runs even if snyk step fails
+        if: always()   # run even if snyk step fails
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk.sarif
