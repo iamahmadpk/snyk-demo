@@ -1,23 +1,39 @@
-name: Container Scan
-on: push
+name: Container Scan and Push
+
+on:
+  push:
+    branches:
+      - main
+
 jobs:
   snyk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build the Docker image
-        run: docker build -t mcastellin/snyk-container-demo .
-      - name: Run Snyk to check and monitor Docker image for vulnerabilities
-        continue-on-error: true
+        id: build_image
+        run: |
+          IMAGE_NAME="mcastellin/snyk-container-demo"
+          docker build -t $IMAGE_NAME .
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Run Snyk to check Docker image for vulnerabilities
+        id: snyk_scan
+        continue-on-error: true # Set to false later if you want a strict failure
         uses: snyk/actions/docker@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: mcastellin/snyk-container-demo
+          image: ${{ steps.build_image.outputs.image_name }}
           args: --file=Dockerfile --exclude-base-image-vulns
-          command: monitor
-      # The following step is removed to stop SARIF upload
-      # - name: Upload result to GitHub Code Scanning
-      #   uses: github/codeql-action/upload-sarif@v3
-      #   with:
-      #     sarif_file: snyk.sarif
+
+      - name: Push image to Docker Hub
+        # This step will only run if the Snyk scan step did not fail
+        if: ${{ success() && steps.snyk_scan.outcome == 'success' }}
+        run: docker push ${{ steps.build_image.outputs.image_name }}
