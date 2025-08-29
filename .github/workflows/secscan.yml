@@ -8,26 +8,22 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Build the Docker image
-        run: docker build -t my-org/my-app:latest .
+        run: docker build -t my-snyk-image .
 
-      - name: Run Snyk to check Docker image for vulnerabilities (and report to Snyk dashboard)
-        continue-on-error: true
+      - name: Run Snyk to check Docker image for vulnerabilities
         uses: snyk/actions/docker@master
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: my-org/my-app:latest
-          args: >
-            --file=Dockerfile
-            --exclude-base-image-vulns
-            --sarif-file-output=snyk.sarif
-            --project-name=snyk-vuln
-            --org=iamahmadpk
+          image: my-snyk-image
+          args: --file=Dockerfile --sarif-file-output=snyk.sarif
 
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v2
+        if: always()   # ensures this runs even if snyk step fails
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk.sarif
